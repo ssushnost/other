@@ -23,7 +23,6 @@ class Ciphers:
             key = int(key)
             lang_alph_lower = Ciphers.alphabets[self.lang]['lower']
             lang_alph_upper = Ciphers.alphabets[self.lang]['upper']
-            # если text != ''
             if self.text:
                 for letter in self.text:
                     if letter in lang_alph_lower:
@@ -38,7 +37,6 @@ class Ciphers:
                         print('unexpected letter', letter)
         return encrypted_result
 
-    # доделать
     def atbash(self) -> str:
         encrypted_result = ''
         lang_alph_lower = Ciphers.alphabets[self.lang]['lower']
@@ -61,171 +59,199 @@ class Ciphers:
 class App(tk.Tk):
     def __init__(self):
         super().__init__()
+        self.frames = {}
+        self.caesar_frame = CaesarFrame()
+        self.caesar_frame.grid(row=1, column=1, sticky="nsew")
+        self.frames['caesar_frame'] = self.caesar_frame
+        self.atbash_frame = AtbashFrame()
+        self.atbash_frame.grid(row=1, column=1, sticky="nsew")
+        self.frames['atbash_frame'] = self.atbash_frame
+        self.main_frame = MainFrame()
+        self.main_frame.grid(row=1, column=1, sticky="nsew")
+        self.frames['main_frame'] = self.main_frame
         self.width = self.winfo_screenwidth()
         self.height = self.winfo_screenheight()
         self.geometry(f'{self.width}x{self.height}')
         self.title('ciphers tkinter')
         self.mainmenu = tk.Menu(master=self)
         self.config(menu=self.mainmenu)
+        self.cipher_menu_var = tk.StringVar()
         self.cipher_menu = tk.Menu(master=self.mainmenu, tearoff=0)
-        self.cipher_menu.add_command(label='caesar',
-                                     command=lambda frame_name='caesar_frame': self.show_frame(frame_name))
-        self.cipher_menu.add_command(label='atbash',
-                                     command=lambda frame_name='atbash_frame': self.show_frame(frame_name))
+        self.cipher_menu.add_radiobutton(label='caesar',
+                                         command=lambda: self.show_frame(self.caesar_frame), value='caesar',
+                                         variable=self.cipher_menu_var)
+        self.cipher_menu.add_radiobutton(label='atbash',
+                                         command=lambda: self.show_frame(self.atbash_frame), value='atbash',
+                                         variable=self.cipher_menu_var)
         self.mainmenu.add_cascade(label='ciphers', menu=self.cipher_menu)
+        self.language_menu_var = tk.StringVar(value='eng')
         self.language_menu = tk.Menu(master=self.mainmenu, tearoff=0)
-        self.language_menu.add_command(label='russian')
-        self.language_menu.add_command(label='english')
+        self.language_menu.add_radiobutton(label='russian', command=lambda: self.set_app_language('rus'), value='rus',
+                                           variable=self.language_menu_var)
+        self.language_menu.add_radiobutton(label='english', command=lambda: self.set_app_language('eng'), value='eng',
+                                           variable=self.language_menu_var)
         self.mainmenu.add_cascade(label='language', menu=self.language_menu)
-        self.frames = {}
-        self.set_frames()
 
-    def set_frames(self):
-        self.caesar_frame = CaesarFrame()
-        self.caesar_frame.grid(row=1, column=1, sticky="nsew")
-        self.frames['caesar_frame'] = self.caesar_frame
-
-        self.atbash_frame = AtbashFrame()
-        self.atbash_frame.grid(row=1, column=1, sticky="nsew")
-        self.frames['atbash_frame'] = self.atbash_frame
-
-        self.main_frame = MainFrame()
-        self.main_frame.grid(row=1, column=1, sticky="nsew")
-        self.frames['main_frame'] = self.main_frame
-
-    def show_frame(self, frame_name):
-        frame = self.frames[frame_name]
+    @staticmethod
+    def show_frame(frame):
         frame.tkraise()
+
+    def set_app_language(self, lang: str):
+        self.mainmenu.entryconfigure(1, label=constants.menus['ciphers'][lang])
+        self.mainmenu.entryconfigure(2, label=constants.menus['language'][lang])
+        self.cipher_menu.entryconfigure(0, label=constants.menus['caesar'][lang])
+        self.cipher_menu.entryconfigure(1, label=constants.menus['atbash'][lang])
+        self.language_menu.entryconfigure(0, label=constants.menus['russian'][lang])
+        self.language_menu.entryconfigure(1, label=constants.menus['english'][lang])
+
+        for frame in self.frames.values():
+            frame.encrypted_text_label_var.set(constants.labels['encrypted_text_label'][lang])
+            frame.encrypted_text_var.set(constants.labels['encrypted_text'][lang]) if not frame.entry_cleared[
+                'key_entry_var'] or not frame.entry_cleared['text_entry_var'] else frame.encrypted_text_var.get()
+            frame.rus_button['text'] = constants.buttons['rus'][lang]
+            frame.eng_button['text'] = constants.buttons['eng'][lang]
+            frame.key_entry_var.set(constants.entrys['key_entry'][lang]) if not frame.entry_cleared[
+                'key_entry_var'] else frame.key_entry_var.get()
+            frame.text_entry_var.set(constants.entrys['text_entry'][lang]) if not frame.entry_cleared[
+                'text_entry_var'] else frame.text_entry_var.get()
 
 
 class FrameConstructor(tk.Frame):
-    def __init__(self, parent, cipher):
+    def __init__(self, cipher):
         super().__init__()
-        self.parent = parent
         self.cipher = cipher
-        self.set_string_vars()
+        self.encrypted_text_var = tk.StringVar(value=constants.labels['encrypted_text']['eng'])
+        self.encrypted_text = tk.Entry(master=self, textvariable=self.encrypted_text_var, state='readonly')
+        self.encrypted_text_label_var = tk.StringVar(value=constants.labels['encrypted_text_label']['eng'])
+        self.encrypted_text_label = tk.Label(master=self, textvariable=self.encrypted_text_label_var)
+        self.lang_var = tk.StringVar(value='eng')
+        self.rus_button = tk.Radiobutton(self, text="rus",
+                                         indicatoron=False, value="rus", width=15,
+                                         command=self.lang_button_command, variable=self.lang_var)
 
-    def set_string_vars(self):
-        self.parent.encrypted_text_var = tk.StringVar()
-        self.parent.key_entry_var = tk.StringVar(value='key', name='key_entry_var')
-        self.parent.lang_var = tk.StringVar(value='eng')
-        self.parent.encrypted_text_label_var = tk.StringVar(
-            value=constants.labels['encrypted_text'][self.parent.lang_var.get()])
+        self.eng_button = tk.Radiobutton(self, text="eng",
+                                         indicatoron=False, value="eng", width=15,
+                                         command=self.lang_button_command, variable=self.lang_var)
+        self.lang_buttons = {'eng': self.eng_button, 'rus': self.rus_button}
+        self.key_entry_var = tk.StringVar(value='key')
+        self.key_entry = tk.Entry(master=self, textvariable=self.key_entry_var)
+        self.key_entry.var = self.key_entry_var
+        self.key_entry.var_name = 'key_entry_var'
+        self.key_entry.bind('<1>',
+                            lambda event, entry=self.key_entry: self.clear_entry_background(entry))
+        self.text_entry_var = tk.StringVar(value='text')
+        self.text_entry = tk.Entry(master=self, textvariable=self.text_entry_var)
+        self.text_entry.var = self.text_entry_var
+        self.text_entry.var_name = 'text_entry_var'
+        self.text_entry.bind('<1>',
+                             lambda event, entry=self.text_entry: self.clear_entry_background(
+                                 entry))
+        self.trace_funcs = {'text_entry_var': self.text_entry_var_trace,
+                            'key_entry_var': self.key_entry_var_trace}
+        self.entry_cleared = {'text_entry_var': False,
+                              'key_entry_var': False}
+        self.encrypted_alph_var = tk.StringVar(value=constants.labels['encrypted_text']['eng'])
+        self.encrypted_alph = tk.Entry(master=self, textvariable=self.encrypted_alph_var, state='readonly')
 
-    def set_info(self):
-        self.parent.info_label = tk.Label(text='information')
-        self.parent.info_label.grid(row=5, column=5)
+    def set_encrypted_alph(self):
+        self.encrypted_alph.grid(row=1, column=1)
 
     def set_encrypted_text(self):
-        self.parent.encrypted_text = tk.Label(master=self.parent, textvariable=self.parent.encrypted_text_var)
-        self.parent.encrypted_text.grid(row=0, column=1)
+        self.encrypted_text.grid(row=0, column=1)
 
     def set_encrypted_text_label(self):
-        self.parent.encrypted_text_label = tk.Label(master=self.parent, textvariable=self.parent.encrypted_text_label_var)
-        self.parent.encrypted_text_label.grid(row=0, column=0)
+        self.encrypted_text_label.grid(row=0, column=0)
 
     def set_lang_buttons(self):
-        self.parent.rus_button = tk.Radiobutton(self.parent, text="rus", variable=self.parent.lang_var,
-                                                indicatoron=False, value="rus",width=15,
-                                                command=self.parent.lang_button_command)
-        self.parent.rus_button.grid(row=3, column=0)
-        self.parent.eng_button = tk.Radiobutton(self.parent, text="eng", variable=self.parent.lang_var,
-                                                indicatoron=False, value="eng", width=15,
-                                                command=self.parent.lang_button_command)
-        self.parent.eng_button.grid(row=4, column=0)
-        self.parent.lang_buttons = {'eng': self.parent.eng_button, 'rus': self.parent.rus_button}
+        self.rus_button.grid(row=3, column=0)
+        self.eng_button.grid(row=4, column=0)
 
     def set_key_entry(self):
-        self.parent.key_entry = tk.Entry(master=self.parent, name='key_entry', textvariable=self.parent.key_entry_var)
-        self.parent.key_entry.grid(row=2, column=0)
-        self.parent.key_entry.bind('<1>',
-                                   lambda event, entry=self.parent.key_entry: self.parent.clear_entry_background(entry))
+        self.key_entry.grid(row=2, column=0)
 
     def set_text_entry(self):
-        self.parent.text_entry_var = tk.StringVar(value='text', name='text_entry_var')
-        self.parent.text_entry = tk.Entry(master=self.parent, name='text_entry',
-                                          textvariable=self.parent.text_entry_var)
-        self.parent.text_entry.grid(row=1, column=0)
-        self.parent.text_entry.bind('<1>',
-                                    lambda event, entry=self.parent.text_entry: self.parent.clear_entry_background(
-                                        entry))
+        self.text_entry.grid(row=1, column=0)
 
     def lang_button_command(self):
-        text = self.parent.text_entry_var.get()
-        lang = self.parent.lang_var.get()
-        key = self.parent.key_entry_var.get()
-        self.parent.encrypted_text_label_var.set(constants.labels['encrypted_text'][lang])
+
+        text = self.text_entry_var.get()
+        lang = self.lang_var.get()
+        key = self.key_entry_var.get()
+
         lang_alph_lower = Ciphers.alphabets[lang]['lower']
         lang_alph_upper = Ciphers.alphabets[lang]['upper']
         max_key_entry_value = len(lang_alph_lower) - 1
         text_last_letter = text[-1] if text else ''
+
         if text_last_letter not in lang_alph_lower + lang_alph_upper:
-            self.parent.text_entry_var.set('')
-            self.parent.encrypted_text_var.set('')
+            self.text_entry_var.set('')
+            self.encrypted_text_var.set('')
+
         if key.isdigit() and int(key) > max_key_entry_value:
-            self.parent.key_entry_var.set(max_key_entry_value)
+            self.key_entry_var.set(max_key_entry_value)
 
     def text_entry_var_trace(self, cipher_name):
-        text = self.parent.text_entry_var.get()
-        key = self.parent.key_entry_var.get()
-        lang = self.parent.lang_var.get()
+
+        text = self.text_entry_var.get()
+        key = self.key_entry_var.get()
+        lang = self.lang_var.get()
+
         cipher = Ciphers(text, key, lang)
         cipher_func = cipher.ciphers_dict[cipher_name]
+
         text_last_letter = text[-1] if text else ''
         all_text_except_last_letter = text[:-1]
+        lang_alph_lower = Ciphers.alphabets[lang]['lower']
+        lang_alph_upper = Ciphers.alphabets[lang]['upper']
+        lang_button = self.rus_button if lang == 'rus' else self.eng_button
+
         if text:
-            if lang == 'rus':
-                if text_last_letter in Ciphers.eng_alph + Ciphers.eng_alph_upper:
-                    self.parent.text_entry_var.set(all_text_except_last_letter)
-                    self.parent.flash(self.parent.rus_button, 100)
-                else:
-                    self.parent.encrypted_text_var.set(cipher_func())
-            elif lang == 'eng':
-                if text_last_letter in Ciphers.rus_alph + Ciphers.rus_alph_upper:
-                    self.parent.text_entry_var.set(all_text_except_last_letter)
-                    self.parent.flash(self.parent.eng_button, 100)
-                else:
-                    self.parent.encrypted_text_var.set(cipher_func())
+            if text_last_letter not in lang_alph_lower + lang_alph_upper and text_last_letter not in Ciphers.other:
+                self.text_entry_var.set(all_text_except_last_letter)
+                self.flash(lang_button, 100)
             else:
-                print('unexpected language: ' + lang)
+                self.encrypted_text_var.set(cipher_func())
 
     #  лагает при спаме
     def flash(self, obj, delay):
-        # Unresolved attribute reference 'after' for class 'AppFrame' если не наследовать от tk.Tk
-        self.parent.after(delay, obj.flash())
+        self.after(delay, obj.flash())
 
     def key_entry_var_trace(self, cipher_name):
-        text = self.parent.text_entry_var.get()
-        key = self.parent.key_entry_var.get()
-        lang = self.parent.lang_var.get()
-        cipher = Ciphers(text, key, lang)
-        cipher_func = cipher.ciphers_dict[cipher_name]
+
+        text = self.text_entry_var.get()
+        key = self.key_entry_var.get()
+        lang = self.lang_var.get()
+
         lang_alph_lower = Ciphers.alphabets[lang]['lower']
-        lang_button = self.parent.lang_buttons[lang]
+        lang_button = self.lang_buttons[lang]
         max_key_entry_value = len(lang_alph_lower) - 1
         all_text_except_last_letter = key[:-1]
+
         if key.isdigit():
             if int(key) > max_key_entry_value:
                 key = max_key_entry_value
-                self.parent.key_entry_var.set(key)
-                self.parent.flash(lang_button, 100)
-            self.parent.encrypted_text_var.set(cipher_func())
+                self.key_entry_var.set(key)
+                self.flash(lang_button, 100)
+            cipher = Ciphers(text, key, lang)
+            cipher_func = cipher.ciphers_dict[cipher_name]
+            self.encrypted_text_var.set(cipher_func())
         else:
-            self.parent.key_entry_var.set(all_text_except_last_letter)
+            self.key_entry_var.set(all_text_except_last_letter)
 
     def clear_entry_background(self, entry):
-        entry_var_string = entry['textvariable']
-        entry_var = eval('self.' + entry_var_string)
+        entry_var = entry.var
+        entry_var_name = entry.var_name
         entry_var.set('')
         entry.unbind('<1>')
-        self.parent.encrypted_text_var.set('')
-        trace_func = eval('self.' + entry_var_string + '_trace')
-        entry_var.trace_add('write', lambda name, index, mode: trace_func(self.parent.cipher))
+        trace_func = self.trace_funcs[entry_var_name]
+        entry_var.trace_add('write', lambda name, index, mode: trace_func(self.cipher))
+        self.entry_cleared[entry_var_name] = True
 
 
 class CaesarFrame(FrameConstructor):
     def __init__(self):
-        super().__init__(parent=self, cipher='caesar')
+        super().__init__(cipher='caesar')
+        self.set_encrypted_alph()
         self.set_encrypted_text()
         self.set_encrypted_text_label()
         self.set_key_entry()
@@ -235,7 +261,8 @@ class CaesarFrame(FrameConstructor):
 
 class AtbashFrame(FrameConstructor):
     def __init__(self):
-        super().__init__(parent=self, cipher='atbash')
+        super().__init__(cipher='atbash')
+        self.set_encrypted_alph()
         self.set_encrypted_text()
         self.set_encrypted_text_label()
         self.set_text_entry()
@@ -244,13 +271,8 @@ class AtbashFrame(FrameConstructor):
 
 class MainFrame(FrameConstructor):
     def __init__(self):
-        super().__init__(parent=self, cipher='None')
+        super().__init__(cipher='None')
 
 
-def main():
-    app = App()
-    app.mainloop()
-
-
-if __name__ == '__main__':
-    main()
+app = App()
+app.mainloop()
